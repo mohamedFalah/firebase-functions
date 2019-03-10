@@ -1,63 +1,100 @@
-const functions = require('firebase-functions');
-//admin sdk
-const admin = require('firebase-admin');
+/**
+ * Copyright 2016 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+'use strict';
 
-///intitalize the admin sdk 
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
 admin.initializeApp();
 
-//notification function 
+/**
+ * Triggers when a user gets a new follower and sends a notification.
+ *
+ * Followers add a flag to `/followers/{followedUid}/{followerUid}`.
+ * Users save their device notification tokens to `/users/{followedUid}/notificationTokens/{notificationToken}`.
+ */
+exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reserverid}/')
+    .onWrite(async (change, context) => {
+      const reserverid = context.params.reserverid;
+      
+      // If un-follow we exit the function.
+      if (!change.after.val()) {
+        return console.log('User ', reserverid, 'un-followed user');
+      }
 
-exports.sendNotificationOnReservation = functions.database.ref('/ReservedItems/{resrverid}/ownerID/{ownerid}').onWrite(event => {
 
-    const ownerid = event.params.ownerid;
-    const resrverid = event.params.resrverid;
+      
+      // Get the list of device notification tokens.
+      const ID = admin.database().ref(`/ReservedItems/${reserverid}/ownerID`).once('value');
+      const userID = await Promise.all([ID]);
 
-    if(!event.data.exists()){
-        return;
-    }
+      const ownerID = userID[0];
 
-    const getDeviceToken = admin.database().ref('UsersToken/${ownerid}/token').once('value');
-    const getRervationInfo = admin.database().ref('wear/${resrverid}/').once('value');
+      
+  
+      console.log('We have a new follower UID:', reserverid, 'for user:', ownerID.val());
 
-    return Promise.all([getDeviceToken,getRervationInfo]).then(results => {
-        const tokenSnapshot = results[0];
-        const reserver = results[1];
+      const getDeviceTokensPromise = admin.database().ref(`/UsersToken/${ownerID.val()}/token`).once('value');
+      // Get the follower profile.
+      const getReseverProfilePromise = admin.database().ref(`/User/${reserverid}`).once('value');
+      // The snapshot to the user's tokens.
+      let tokensSnapshot;
 
-        if(!token.hasChildren()){
-            return console.log('no notification token');
+      // The array containing all the user's tokens.
+      let tokens;
+
+      const results = await Promise.all([getDeviceTokensPromise, getReseverProfilePromise]);
+
+
+      tokensSnapshot = results[0];
+      const resever = results[1].val();
+      console.log('There are no notification tokens to send to.' + tokensSnapshot + "and " + resever);
+      // Check if there are any device tokens.
+      //if (!tokensSnapshot.hasChildren()) {
+        //return console.log('There are no notification tokens to send to.');
+      //}
+      console.log('There are', tokensSnapshot.numChildren(), 'tokens to send notifications to.');
+      console.log('Fetched follower profile', resever);
+
+      // Notification details.
+      const payload = {
+        notification: {
+          title: 'New Reservation!',
+          body: `${resever.userFullName} Reserved your item.`,
         }
+      };
 
-        const reserverName = reserver.val().FirstName;
+      // Listing all tokens as an array.
+      //tokens = Object.keys(tokensSnapshot.token.val());
+      // Send notifications to all tokens.
+      return  admin.messaging().sendToDevice(tokensSnapshot.val(), payload);
+      // For each message check if there was an error.
+      //const tokensToRemove = [];
+      //response.results.forEach((result, index) => {
+        //const error = result.error;
+        //if (error) {
+          //console.error('Failure sending notification to', tokens[index], error);
+          // Cleanup the tokens who are not registered anymore.
+          //if (error.code === 'messaging/invalid-registration-token' ||
+            //  error.code === 'messaging/registration-token-not-registered') {
+            //tokensToRemove.push(tokensSnapshot.ref.child(tokens[index]).remove());
+          //}
+        //}
+      });
+      //return Promise.all(tokensToRemove);
 
-        console.log('follower', reserverName);
 
 
-        //notification detalis 
-        const payload = {
-            data:{
-                title: 'your item has been reserved',
-                body: '${reserverName} has reserved your item'
-            }
-        };
-
-        const token = Object.keys(tokenSnapshot.val());
-
-        return admin.messaging().sendToDevice(token, payload).then(response => {
-            const tokensToRemove = [];
-
-            response.results.forEach((result, index)=>{
-                const error = result.error;
-                if(error){
-                    console.error('fail', token[index],error);
-                    // Cleanup the tokens who are not registered anymore.
-                    if (error.code === 'messaging/invalid-registration-token' ||
-                        error.code === 'messaging/registration-token-not-registered') {
-                             tokensToRemove.push(tokensSnapshot.ref.child(tokens[index]).remove());
-                    }
-                }
-            });
-            return Promise.all(tokensToRemove);
-                });
-            });
-        });
-
+  
