@@ -25,9 +25,9 @@ admin.initializeApp();
  * Followers add a flag to `/followers/{followedUid}/{followerUid}`.
  * Users save their device notification tokens to `/users/{followedUid}/notificationTokens/{notificationToken}`.
  */
-exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reserverid}/')
+exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reservationId}/')
     .onWrite(async (change, context) => {
-      const reserverid = context.params.reserverid;
+      const reservationId = context.params.reservationId;
       
       // If un-follow we exit the function.
       if (!change.after.val()) {
@@ -37,10 +37,13 @@ exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reser
 
       
       // Get the list of device notification tokens.
-      const ID = admin.database().ref(`/ReservedItems/${reserverid}/ownerID`).once('value');
+      const ID = admin.database().ref(`/ReservedItems/${reservationId}/ownerID`).once('value');
+      const ID2 = admin.database().ref(`/ReservedItems/${reservationId}/reserverID`).once('value');
       const userID = await Promise.all([ID]);
+      const user2ID = await Promise.all([ID2]);
 
       const ownerID = userID[0];
+      const reserverID = user2ID[0];
 
       
   
@@ -48,7 +51,7 @@ exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reser
 
       const getDeviceTokensPromise = admin.database().ref(`/UsersToken/${ownerID.val()}/token`).once('value');
       // Get the follower profile.
-      const getReseverProfilePromise = admin.database().ref(`/User/${reserverid}`).once('value');
+      const getReseverProfilePromise = admin.database().ref(`/User/${reserverID}`).once('value');
       // The snapshot to the user's tokens.
       let tokensSnapshot;
 
