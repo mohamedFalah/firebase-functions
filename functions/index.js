@@ -93,7 +93,27 @@ exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reser
           //}
         //}
       });
-      //return Promise.all(tokensToRemove);
+
+
+      //market items remove from market after 11 hours passed 
+ 
+
+exports.CancelReservation = functions.https.onRequest((req, res) => {
+
+    const TIME_TO_REMOVE = 11 * 60 * 60 * 10000; // 11 hours
+    const nowTime = Date.now();
+    const dbRef = admin.database().ref('/ReservedItems'); 
+
+    dbRef.once("value", (snapshot) => {
+      snapshot.forEach((child => {
+        if((nowTime - Number(child.val()['time'])) >= TIME_TO_REMOVE){
+              child.ref.set(null);
+      }
+      }));    
+    });
+
+    return res.status(200).end();
+});
 
 
 

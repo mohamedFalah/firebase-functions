@@ -6,7 +6,7 @@ from firebase import firebase
 
 class fetcher:
  
-        firebase = firebase.FirebaseApplication('https://seniorproject003kfupm.firebaseio.com/',None)
+        firebase = firebase.FirebaseApplication('https://kfupm-social-space.firebaseio.com/',None)
 
         #declareing variable for the page url 
 
@@ -20,33 +20,34 @@ class fetcher:
         # contain the html of the page)
 
         soup = BeautifulSoup(news_page_html, 'html.parser')
-
+        
         titles = []
         images = []
+        news_page =[]
 
-        def __call__():
-                news_fetch()
-                print('work')
+        
+        #find the div needed from the website 
+        for h3 in soup.findAll('h3', attrs={'class':'media-heading'}):
+                title = h3.text
+                if(title != ""):
+                        titles.append(title)
 
-        def news_fetch():
-                output = {'status':'done'}
-                #find the div needed from the website 
-                for h3 in soup.findAll('h3', attrs={'class':'media-heading'}):
-                        title = h3.text
-                        if(title != ""):
-                                titles.append(title)
+        for h3 in soup.findAll('h3', attrs={'class':'media-heading'}):
+                for img in h3.findAll('img', src=True):
+                        imageUrl = 'https://news.kfupm.edu.sa'+ img['src']
+                        images.append(imageUrl)
 
-                for h3 in soup.findAll('h3', attrs={'class':'media-heading'}):
-                        for img in h3.findAll('img', src=True):
-                                imageUrl = 'https://news.kfupm.edu.sa'+ img['src']
-                                images.append(imageUrl)
+        for div in soup.findAll('div', attrs={'class':'media-body'}):
+                for a in div.findAll('a', href=True):
+                        NewsUrl = 'https://news.kfupm.edu.sa'+ a['href']
+                        news_page.append(NewsUrl)
 
-                for i in range(len(titles)):
-                        news = {'title':titles[i], 'image':images[i]}
-                        sent = json.dumps(news)
-                        result = firebase.post("/News", news)
+        for i in range(len(titles)):
+                news = {'title':titles[i], 'image':images[i], 'page':news_page[i]}
+                sent = json.dumps(news)
+                result = firebase.post("/News", news)
                 
-                return jsonify(output) 
+        print("Done")
                         
 
                 

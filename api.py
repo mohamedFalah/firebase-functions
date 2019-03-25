@@ -26,6 +26,8 @@ soup = BeautifulSoup(news_page_html, 'html.parser')
 
 titles = []
 images = []
+news_page =[]
+
 
 def news_fetch():
                 output = {'status':'done'}
@@ -39,6 +41,11 @@ def news_fetch():
                         for img in h3.findAll('img', src=True):
                                 imageUrl = 'https://news.kfupm.edu.sa'+ img['src']
                                 images.append(imageUrl)
+
+                for div in soup.findAll('div', attrs={'class':'media-body'}):
+                        for a in div.findAll('a', href=True):
+                                NewsUrl = 'https://news.kfupm.edu.sa'+ a['href']
+                                news_page.append(NewsUrl)
 
                 for i in range(len(titles)):
                         news = {'title':titles[i], 'image':images[i]}
