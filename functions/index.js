@@ -47,11 +47,11 @@ exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reser
 
       
   
-      console.log('We have a new follower UID:', reserverid, 'for user:', ownerID.val());
+      console.log('We have a new follower UID:', reserverID.val(), 'for user:', ownerID.val());
 
       const getDeviceTokensPromise = admin.database().ref(`/UsersToken/${ownerID.val()}/token`).once('value');
       // Get the follower profile.
-      const getReseverProfilePromise = admin.database().ref(`/User/${reserverID}`).once('value');
+      const getReseverProfilePromise = admin.database().ref(`/User/${reserverID.val()}`).once('value');
       // The snapshot to the user's tokens.
       let tokensSnapshot;
 
@@ -104,14 +104,22 @@ exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reser
 exports.CancelReservation = functions.https.onRequest((req, res) => {
 
     const TIME_TO_REMOVE = 11 * 60 * 60 * 10000; // 11 hours
+
+    //test const 
+    const time_to_remove = 600000  // 10 minutess
+
     const nowTime = Date.now();
+
+    const removeTime =  nowTime + time_to_remove;
+
     const dbRef = admin.database().ref('/ReservedItems'); 
 
     dbRef.once("value", (snapshot) => {
       snapshot.forEach((child => {
-        if((nowTime - Number(child.val()['time'])) >= TIME_TO_REMOVE){
-              child.ref.set(null);
+            if((Number(child.val()['time'])+ time_to_remove) <= nowTime){
+              child.ref.remove();
       }
+      
       }));    
     });
 
