@@ -76,6 +76,7 @@ exports.sendFollowerNotification = functions.database.ref('/ReservedItems/{reser
         notification: {
           title: 'New Reservation!',
           body: `${resever.userFullName} Reserved your item.`,
+          activity: 'ReservedItemsActivity',
         }
       };
 
